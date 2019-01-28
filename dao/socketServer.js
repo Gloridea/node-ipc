@@ -153,8 +153,8 @@ function serverClosed(){
     }
 }
 
-function gotData(socket,data,UDPSocket){
-    let sock=((this.udp4 || this.udp6)? UDPSocket : socket);
+function gotData(connection,data,UDPSocket){
+    let sock=((this.udp4 || this.udp6)? UDPSocket : connection.socket);
     if(this.config.rawBuffer){
         data=new Buffer(data,this.config.encoding);
         this.publish(
@@ -165,18 +165,14 @@ function gotData(socket,data,UDPSocket){
         return;
     }
 
-    if(!this.ipcBuffer){
-        this.ipcBuffer='';
-    }
-
-    data=(this.ipcBuffer+=data);
+    data=(connection.ipcBuffer+=data);
 
     if(data.slice(-1)!=eventParser.delimiter || data.indexOf(eventParser.delimiter) == -1){
         this.log('Messages are large, You may want to consider smaller messages.');
         return;
     }
 
-    this.ipcBuffer='';
+    connection.ipcBuffer='';
 
     data=eventParser.parse(data);
 
@@ -230,7 +226,10 @@ function serverCreated(socket) {
 
     socket.on(
         'data',
-        gotData.bind(this,socket)
+        gotData.bind(this,{
+            ipcBuffer:'',
+            socket
+        })
     );
 
     socket.on(
